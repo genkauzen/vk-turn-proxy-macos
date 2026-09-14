@@ -39,6 +39,7 @@ targets:
         # compliance documentation needed" + a France-specific prompt.
         # Was lost in an earlier xcodegen regenerate; pinned here now.
         ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: "Allows this iPhone to accept SOCKS5 connections from devices on the same local network while the VPN tunnel is active."
         # Required before ActivityKit will start a Live Activity at all
         # (GitHub issue #64). Without it Activity.request throws and the
         # island never appears — with no other symptom.
@@ -160,6 +161,7 @@ targets:
       # sink: providerConfiguration carries whatever ended up in UserDefaults,
       # and an imported backup is not a trusted source.
       - path: VKTurnProxy/TunnelMTU.swift
+      - path: VKTurnProxy/LANProxyConfiguration.swift
     info:
       path: PacketTunnel/Info.plist
       properties:

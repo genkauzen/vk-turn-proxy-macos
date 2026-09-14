@@ -204,6 +204,87 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         csqttWatchdog = nil
     }
 
+    private var lanProxy: LANProxy?
+    private var lanProxyEnabled = false
+    private var lanProxyPort = LANProxyConfiguration.defaultPort
+    private var tunnelReady = false
+
+    private func startLANProxyIfNeeded() {
+        guard tunnelReady else { return }
+        guard lanProxyEnabled else { return }
+        guard directReady else { return }
+        guard !directSync.applied else {
+            logMsg("LAN proxy: disabled while DIRECT routing is active")
+            return
+        }
+        guard lanProxy == nil else { return }
+        guard let port = UInt16(exactly: lanProxyPort) else { return }
+
+        if #available(iOS 18.0, *) {
+            guard let virtualInterface else {
+                logMsg("LAN proxy: tunnel interface is unavailable")
+                return
+            }
+            let proxy = LANProxy(
+                port: port,
+                upstreamFactory: { host, remotePort, queue in
+                    guard let endpointPort = NWEndpoint.Port(rawValue: remotePort) else { return nil }
+                    let parameters = NWParameters.tcp
+                    parameters.requiredInterface = virtualInterface
+                    parameters.prohibitExpensivePaths = false
+                    parameters.prohibitConstrainedPaths = false
+                    let connection = NWConnection(
+                        host: NWEndpoint.Host(host),
+                        port: endpointPort,
+                        using: parameters
+                    )
+                    return LANProxyNWUpstream(connection: connection, queue: queue)
+                },
+                log: { [weak self] message in
+                    self?.logMsg(message)
+                }
+            )
+            lanProxy = proxy
+            proxy.start()
+            return
+        }
+
+        let proxy = LANProxy(
+            port: port,
+            upstreamFactory: { [weak self] host, remotePort, queue in
+                self?.makeLegacyLANProxyUpstream(host: host, port: remotePort, queue: queue)
+            },
+            log: { [weak self] message in
+                self?.logMsg(message)
+            }
+        )
+        lanProxy = proxy
+        proxy.start()
+    }
+
+    private func makeLegacyLANProxyUpstream(
+        host: String,
+        port: UInt16,
+        queue: DispatchQueue
+    ) -> LANProxyUpstream? {
+        guard port != 0 else { return nil }
+        let endpoint = NWHostEndpoint(hostname: host, port: String(port))
+        let connection = createTCPConnectionThroughTunnel(
+            to: endpoint,
+            enableTLS: false,
+            tlsParameters: nil,
+            delegate: nil
+        )
+        return LANProxyLegacyUpstream(connection: connection, queue: queue)
+    }
+
+    private func stopLANProxy(_ reason: String) {
+        guard lanProxy != nil else { return }
+        logMsg("LAN proxy: stopping (\(reason))")
+        lanProxy?.stop()
+        lanProxy = nil
+    }
+
     /// A csqtt stop reason as iOS carries it to the app: an NSError with the
     /// text IN userInfo, exactly like the cookie watchdog's. A Swift error's
     /// `errorDescription` is computed on access and does not cross the
@@ -227,6 +308,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         // behavior.
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         logMsg("startTunnel called (build \(build))")
+        tunnelReady = false
+        stopLANProxy("new tunnel start")
         startPathMonitoring()
 
         // Set Go timezone BEFORE wgSetLogFilePath so the first Go log line
@@ -274,6 +357,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         // tunnel IP and DNS (csqttProvision) and the bridge pumps raw IP
         // packets; wg_config is a placeholder on this path, like WRAP-A's.
         let isCSQTT = (config["use_csqtt"] as? Bool) ?? false
+        lanProxyEnabled = (config[LANProxyConfiguration.enabledKey] as? Bool) ?? false
+        if let port = (config[LANProxyConfiguration.portKey] as? NSNumber)?.intValue,
+           LANProxyConfiguration.portRange.contains(port) {
+            lanProxyPort = port
+        } else {
+            lanProxyPort = LANProxyConfiguration.defaultPort
+        }
 
         logMsg("tunnelAddress=\(tunnelAddress) dns=\(dnsServers) mtu=\(mtu)\(mtuExplicit ? " (user-set)" : "")")
         // The config carries secrets (csqtt's password, WRAP-A's, the wrap key,
@@ -577,6 +667,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                         return
                     }
                     self.logMsg("attach OK — tunnel fully up")
+                    self.tunnelReady = true
                     if isCSQTT {
                         self.startCsqttWatchdog(backend)
                     }
@@ -650,6 +741,31 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             logMsg("handleAppMessage: memstats fast ticks = \(on)")
             wgSetMemstatsFastTicks(on ? 1 : 0)
             completionHandler?("ok".data(using: .utf8))
+        } else if msg.hasPrefix("set_lan_proxy:") {
+            let parts = msg.dropFirst("set_lan_proxy:".count).split(separator: ":")
+            guard parts.count == 2,
+                  let enabledValue = Int(parts[0]),
+                  let port = Int(parts[1]),
+                  (enabledValue == 0 || enabledValue == 1),
+                  LANProxyConfiguration.portRange.contains(port) else {
+                completionHandler?("bad".data(using: .utf8))
+                return
+            }
+            DispatchQueue.main.async {
+                let enabled = enabledValue == 1
+                let changed = self.lanProxyEnabled != enabled || self.lanProxyPort != port
+                self.lanProxyEnabled = enabled
+                self.lanProxyPort = port
+                if !enabled {
+                    self.stopLANProxy("disabled from Settings")
+                } else if changed {
+                    self.stopLANProxy("settings changed")
+                    self.startLANProxyIfNeeded()
+                } else {
+                    self.startLANProxyIfNeeded()
+                }
+                completionHandler?("ok".data(using: .utf8))
+            }
         } else if msg.hasPrefix("set_direct:") {
             // 🚧 DIAGNOSTIC, issue #72 — NOT a feature yet. Re-applies the
             // tunnel's ROUTES on a live session: DIRECT drops the default
@@ -754,6 +870,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         let started = Date()
         let elapsedMs: () -> Int = { Int(Date().timeIntervalSince(started) * 1000) }
         logMsg("stopTunnel: entered (reason=\(reason.rawValue))")
+        tunnelReady = false
+        stopLANProxy("tunnel stopping")
         stopPathMonitoring()
         stopAuthErrorWatchdog()
         stopCsqttWatchdog()
@@ -1183,6 +1301,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         logMsg("direct: applying \(direct ? "ON" : "OFF") (\(reason)); "
             + "fd before=\(fdBefore) attached=\(attachedTunFd)")
 
+        if direct {
+            stopLANProxy("DIRECT routing requested")
+        }
+
         let settings = createTunnelSettings(
             address: lastSettingsAddress,
             dns: lastSettingsDNS,
@@ -1234,6 +1356,9 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                 self.logMsg("direct: \(direct ? "ON" : "OFF") applied in \(ms) ms; "
                     + "fd \(self.attachedTunFd) still \(self.attachedTunName) (utun fds \(names)) ✅ "
                     + "Go's descriptor is still valid")
+                if !direct {
+                    self.startLANProxyIfNeeded()
+                }
                 self.afterDirectApply(ok: true)
             }
         }
@@ -1273,8 +1398,18 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             + "in its FIRST settings — no second apply needed")
         if let pending = directPendingBeforeReady {
             directPendingBeforeReady = nil
+            if pending {
+                stopLANProxy("DIRECT routing pending at startup")
+            } else {
+                startLANProxyIfNeeded()
+            }
             requestDirect(pending, reason: "deferred-from-startup")
         } else {
+            if initial {
+                stopLANProxy("DIRECT routing active at startup")
+            } else {
+                startLANProxyIfNeeded()
+            }
             settleDirect()
         }
     }
