@@ -14,6 +14,7 @@
 		1B2231DF1954F65A65A76DF6 /* WireGuardTURN.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 99E2AC40D13D6F8DD598752A /* WireGuardTURN.xcframework */; };
 		2258C22D99B69A76D003E18E /* SpeedTestResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659F62CE4BD2601F9F460E16 /* SpeedTestResultView.swift */; };
 		2263C90DC75E56A0D637B2B4 /* CredCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72BF34DDA41B9171843CDA5 /* CredCache.swift */; };
+		22F8919A898A9037C35FE5CE /* LANProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90C0B23F95973EE1A9209E2 /* LANProxy.swift */; };
 		23FB3FA154A0B74AE5DFB39C /* ConfigValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB6146869BD6DC55039EC2 /* ConfigValidation.swift */; };
 		302CCA96A99CD22B03E23267 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 41F2E4485000AF848A0CFE03 /* AppIntents.framework */; };
 		345D04790140FC9B1A31AC79 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D5497E7CB6997DF2AEBA06 /* SpeedTestView.swift */; };
@@ -24,6 +25,7 @@
 		3F33AE79B74735B536FE1D31 /* SharedLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A648919F90B0D8CBE826BC6E /* SharedLogger.swift */; };
 		4AECEBA5AD6EEA34A18281C0 /* SpeedTestServerList.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC7C5DA2979EF658A4117B58 /* SpeedTestServerList.swift */; };
 		4CED034D8AD400C0702E369A /* VKCookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5927A5725339CB3E0F08E4B /* VKCookieStore.swift */; };
+		4E1CA684BC34036BA0F404C7 /* LocalNetworkAddress.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07F855DC136753746D07021 /* LocalNetworkAddress.swift */; };
 		4FB5626AA1842BFC42564DBF /* PacketTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E28ACD6367F3CDE026C71A36 /* PacketTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		50AF389CBE3BAA5A56C452A6 /* DirectRouteSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1282B32632D21838CCD72924 /* DirectRouteSync.swift */; };
 		5474956678AC676C6E7AE2E6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 50685ED014984982ABF8CF0C /* Assets.xcassets */; };
@@ -32,6 +34,7 @@
 		55808C77B750142FE667ECDE /* VPNConfigFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B78245B4410AB09F5B6E47 /* VPNConfigFailure.swift */; };
 		5A51F39BC5B490E741582E37 /* DisconnectReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146B18C17C1A93DCF5F73315 /* DisconnectReason.swift */; };
 		5BFFE56605C7A3D0A4672924 /* VKTurnProxyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE10D4B4A2BE32E0DD5E3D4 /* VKTurnProxyApp.swift */; };
+		62BD8B8D3BFA88909BC1FF54 /* LANProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA967E7EB77FF2B894B59099 /* LANProxyConfiguration.swift */; };
 		6481DAB30DAF3572C55089E0 /* TunnelMTU.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80CE8603F45C625FABAC090 /* TunnelMTU.swift */; };
 		652C39DB65907355CDF83B99 /* UplinkPace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 422D7F513A45A12E8A142AA1 /* UplinkPace.swift */; };
 		6795B707AE033110D01EB135 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 41F2E4485000AF848A0CFE03 /* AppIntents.framework */; };
@@ -67,6 +70,7 @@
 		D51B685C21E726518A413AF3 /* ConnectionLinkImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975F526A4188951C5B37166D /* ConnectionLinkImport.swift */; };
 		E0F6CA7385F3718A0A9CD3FC /* KeyboardDismisser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9ADA67065E63261009BBE2 /* KeyboardDismisser.swift */; };
 		E1250E1BF6D8FBFBCCFB25BF /* VKProfileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CEB6CB28E1CC064B6D8C79 /* VKProfileCache.swift */; };
+		E34C78024FB8BE42B6B078A6 /* LANProxyConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA967E7EB77FF2B894B59099 /* LANProxyConfiguration.swift */; };
 		E81C2A079BD562EA18ED30FF /* DirectRouteSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1282B32632D21838CCD72924 /* DirectRouteSync.swift */; };
 		EB460C0EF55043B900C0A58A /* DirectOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E39A2C99999A2CD35D462DF /* DirectOutcome.swift */; };
 		EC655ABF39382FEE687B5F44 /* TunnelBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0637E9F13ED224A520932604 /* TunnelBackend.swift */; };
@@ -166,11 +170,14 @@
 		B579DDFDDB7800E681CAC9C4 /* OSLogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogReader.swift; sourceTree = "<group>"; };
 		B72BF34DDA41B9171843CDA5 /* CredCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredCache.swift; sourceTree = "<group>"; };
 		B9126F72D30AE6D3503CC167 /* VKTurnProxyWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKTurnProxyWidgetBundle.swift; sourceTree = "<group>"; };
+		BA967E7EB77FF2B894B59099 /* LANProxyConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LANProxyConfiguration.swift; sourceTree = "<group>"; };
 		C3A5B4FA5218B9A32CDB5F78 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		C80CE8603F45C625FABAC090 /* TunnelMTU.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelMTU.swift; sourceTree = "<group>"; };
 		CFF216A96C8B2716DA861C50 /* LiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityIntents.swift; sourceTree = "<group>"; };
+		D07F855DC136753746D07021 /* LocalNetworkAddress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNetworkAddress.swift; sourceTree = "<group>"; };
 		D50AB4E14F60429CED233BAF /* WireGuardConfText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WireGuardConfText.swift; sourceTree = "<group>"; };
 		D5927A5725339CB3E0F08E4B /* VKCookieStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKCookieStore.swift; sourceTree = "<group>"; };
+		D90C0B23F95973EE1A9209E2 /* LANProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LANProxy.swift; sourceTree = "<group>"; };
 		DC7C5DA2979EF658A4117B58 /* SpeedTestServerList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestServerList.swift; sourceTree = "<group>"; };
 		DDB21244CBAB1A5B17A5CF06 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E04340A5B77EA3853EAB93D0 /* ConnectionLinkFragment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionLinkFragment.swift; sourceTree = "<group>"; };
@@ -221,6 +228,7 @@
 			children = (
 				ABD27AB0E7EC764C51D52D10 /* BridgeHeader.h */,
 				F16CAECB3D91AC18F93D32C0 /* Info.plist */,
+				D90C0B23F95973EE1A9209E2 /* LANProxy.swift */,
 				A01BE3EACAF5D00A44A0D32E /* PacketTunnel.entitlements */,
 				4D06132B25271A4E9DA8F0C6 /* PacketTunnelProvider.swift */,
 				1C7C4C08873404E9AB6C562A /* ProxyConfigRedaction.swift */,
@@ -271,8 +279,10 @@
 				146B18C17C1A93DCF5F73315 /* DisconnectReason.swift */,
 				3979E0E80EBC90588B51D4A5 /* Info.plist */,
 				6D9ADA67065E63261009BBE2 /* KeyboardDismisser.swift */,
+				BA967E7EB77FF2B894B59099 /* LANProxyConfiguration.swift */,
 				8B1A512B35CE1D505CB1A3CD /* LiveActivityController.swift */,
 				CFF216A96C8B2716DA861C50 /* LiveActivityIntents.swift */,
+				D07F855DC136753746D07021 /* LocalNetworkAddress.swift */,
 				B579DDFDDB7800E681CAC9C4 /* OSLogReader.swift */,
 				41B2D2BACDE5E78E1E2E72C2 /* RoutingShortcuts.swift */,
 				16894D17BB018EECDC8F01FF /* ServerEditView.swift */,
@@ -453,6 +463,8 @@
 			files = (
 				F11AED7C7036E8FA47F81179 /* AppEntitlements.swift in Sources */,
 				E81C2A079BD562EA18ED30FF /* DirectRouteSync.swift in Sources */,
+				22F8919A898A9037C35FE5CE /* LANProxy.swift in Sources */,
+				62BD8B8D3BFA88909BC1FF54 /* LANProxyConfiguration.swift in Sources */,
 				90CBABBC0C21BE682CF22ACF /* OSLogReader.swift in Sources */,
 				B1B5B221672B08CCCC35BE51 /* PacketTunnelProvider.swift in Sources */,
 				69634039BA6025FF5BECEBF7 /* ProxyConfigRedaction.swift in Sources */,
@@ -493,8 +505,10 @@
 				50AF389CBE3BAA5A56C452A6 /* DirectRouteSync.swift in Sources */,
 				5A51F39BC5B490E741582E37 /* DisconnectReason.swift in Sources */,
 				E0F6CA7385F3718A0A9CD3FC /* KeyboardDismisser.swift in Sources */,
+				E34C78024FB8BE42B6B078A6 /* LANProxyConfiguration.swift in Sources */,
 				C272EDFB69425D4F95736DE9 /* LiveActivityController.swift in Sources */,
 				3A638CAC10B3F4B84965F83F /* LiveActivityIntents.swift in Sources */,
+				4E1CA684BC34036BA0F404C7 /* LocalNetworkAddress.swift in Sources */,
 				9FC59D2A14AA5E66C86F6C95 /* OSLogReader.swift in Sources */,
 				7CA072A4E64691BE582D450C /* RoutingShortcuts.swift in Sources */,
 				34A869BAE79B9DB63568AC30 /* ServerEditView.swift in Sources */,
