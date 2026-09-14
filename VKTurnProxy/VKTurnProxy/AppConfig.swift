@@ -160,6 +160,10 @@ struct AppSettings: Codable {
     /// in the backup — they live in the Keychain (VKCookieStore). Optional +
     /// `var` so Codable decodes it (nil-preserve on import). Default nil.
     var vkAuth: Bool? = nil
+    /// LAN SOCKS5 listener settings. Optional so backups created before the
+    /// LAN proxy feature leave the receiving device's choice unchanged.
+    var lanProxyEnabled: Bool? = nil
+    var lanProxyPort: Int? = nil
     /// Live Activity master switch (Settings › Advanced, issue #64). A GLOBAL
     /// preference like vkAuth, so it round-trips in full backups — a setting
     /// silently lost on restore is its own debugging session. Optional + `var`

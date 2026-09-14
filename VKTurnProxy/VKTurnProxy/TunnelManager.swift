@@ -160,6 +160,8 @@ extension TunnelConfig {
             memstatsFastTicks: d.bool(forKey: "memstatsFastTicks"),
             uplinkPaceKiB: UplinkPace.stored(in: d),
             useCookieAuth: d.bool(forKey: "VKAuth"),
+            lanProxyEnabled: d.bool(forKey: LANProxyConfiguration.enabledKey),
+            lanProxyPort: LANProxyConfiguration.port(in: d),
             numConnections: s.numConnections,
             credPoolCooldownSeconds: s.credPoolCooldownSeconds,
             turnServerOverride: turnOv?.host,
@@ -965,7 +967,12 @@ class TunnelManager: ObservableObject {
                 "use_cookie_auth": config.useCookieAuth,
                 // VKAuth call links (cookie mode): the pool spreads conns across
                 // each call's 2 TURN relays. Not a secret — just call link IDs.
-                "vk_cookie_links": config.cookieLinks
+                "vk_cookie_links": config.cookieLinks,
+                // The LAN proxy is consumed only by the PacketTunnel extension.
+                // Its outbound connections require the extension's virtual
+                // interface before they are allowed to start.
+                LANProxyConfiguration.enabledKey: config.lanProxyEnabled,
+                LANProxyConfiguration.portKey: config.lanProxyPort
             ]
 
             // Full-tunnel mode (Step 4 of the APNs-through-tunnel refactor).
@@ -1092,6 +1099,15 @@ class TunnelManager: ObservableObject {
         let on = UserDefaults.standard.bool(forKey: "memstatsFastTicks")
         guard let session = manager?.connection as? NETunnelProviderSession,
               let msg = "set_memstats_fast:\(on ? 1 : 0)".data(using: .utf8) else { return }
+        try? session.sendProviderMessage(msg) { _ in }
+    }
+
+    func applyLANProxy() {
+        let defaults = UserDefaults.standard
+        let enabled = defaults.bool(forKey: LANProxyConfiguration.enabledKey)
+        let port = LANProxyConfiguration.port(in: defaults)
+        guard let session = manager?.connection as? NETunnelProviderSession,
+              let msg = "set_lan_proxy:\(enabled ? 1 : 0):\(port)".data(using: .utf8) else { return }
         try? session.sendProviderMessage(msg) { _ in }
     }
 
@@ -3251,6 +3267,9 @@ struct TunnelConfig {
     // anonymous fallback). The cookie itself lives in the Keychain
     // (VKCookieStore); this flag flows to Go via proxy_config use_cookie_auth.
     var useCookieAuth: Bool = false
+    // LAN proxy: global settings, applied when the next tunnel starts.
+    var lanProxyEnabled: Bool = false
+    var lanProxyPort: Int = LANProxyConfiguration.defaultPort
     var numConnections: Int = 30 // configurable from Settings; VK allows ~10 simultaneous TURN allocations per cred set, so 30 conns spreads over ceil(N/10) = 3 cred sets plus a "+1 reserve" (4 total slots). 30 strikes a useful balance: enough parallelism for high-throughput single sessions, few enough to avoid overwhelming VK's per-IP rate-limit on cred refresh.
     // Per-slot cooldown after a failed fetch (typically captcha required).
     // Slot stays in cooldown for this long before being eligible to retry.

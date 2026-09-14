@@ -436,6 +436,10 @@ struct SettingsView: View {
     // backups — this is just the on/off switch. Turning it OFF does not delete
     // the cookies.
     @AppStorage("VKAuth") private var vkAuthEnabled = false
+    @AppStorage(LANProxyConfiguration.enabledKey) private var lanProxyEnabled = false
+    @AppStorage(LANProxyConfiguration.portKey) private var lanProxyPort = LANProxyConfiguration.defaultPort
+    @ObservedObject private var tunnel = TunnelManager.shared
+    @State private var lanAddress = "unavailable"
 
     // Named-server store (M2). The active server's fields are projected into the
     // flat @AppStorage keys above by ServerStore, so ContentView's connect path
@@ -641,6 +645,27 @@ struct SettingsView: View {
             }
 
             Section {
+                Toggle("LAN Proxy", isOn: $lanProxyEnabled)
+
+                Text("SOCKS5: \(lanAddress):\(lanProxyPort)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Text("Port")
+                    Spacer()
+                    TextField("1080", value: $lanProxyPort, formatter: Self.portFormatter)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 90)
+                }
+            } header: {
+                Text("LAN Proxy")
+            } footer: {
+                Text("Accepts SOCKS5 CONNECT from devices on the same Wi-Fi network. The listener is available only after the VPN tunnel is fully up, uses Wi-Fi local-only binding, and stops with the tunnel. Changes apply on the next connection. DIRECT routing disables the proxy.")
+            }
+
+            Section {
                 NavigationLink(destination: AdvancedView()) {
                     Label("Advanced", systemImage: "slider.horizontal.3")
                 }
@@ -685,6 +710,12 @@ struct SettingsView: View {
         }
         .dismissKeyboardOnDrag()
         .navigationTitle("Settings")
+        .onAppear {
+            lanAddress = LocalNetworkAddress.wifiIPv4() ?? "unavailable"
+            tunnel.applyLANProxy()
+        }
+        .onChange(of: lanProxyEnabled) { _ in tunnel.applyLANProxy() }
+        .onChange(of: lanProxyPort) { _ in tunnel.applyLANProxy() }
         // Share sheet for the freshly-exported temp file. Bound to a
         // sheet(item:) so the file is in scope while the sheet is open
         // and gets cleaned up implicitly when SwiftUI sets the binding
@@ -846,6 +877,14 @@ struct SettingsView: View {
         // 🚫 The inbox is not consumed here — the alert above is the PASTE
         // path only. → ConnectionLinkImport.swift.
     }
+
+    private static let portFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.minimum = LANProxyConfiguration.portRange.lowerBound as NSNumber
+        formatter.maximum = LANProxyConfiguration.portRange.upperBound as NSNumber
+        return formatter
+    }()
 
     // MARK: - Backup actions
 

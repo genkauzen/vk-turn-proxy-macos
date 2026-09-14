@@ -82,6 +82,8 @@ enum BackupManager {
         // Globals (not per-server). Everything else now lives in `servers`.
         let vkLink = d.string(forKey: "vkLink") ?? ""
         let vkAuth = (d.object(forKey: "VKAuth") as? Bool) ?? false
+        let lanProxyEnabled = (d.object(forKey: LANProxyConfiguration.enabledKey) as? Bool) ?? false
+        let lanProxyPort = LANProxyConfiguration.port(in: d)
         let liveActivity = (d.object(forKey: "liveActivityEnabled") as? Bool) ?? false
         let liveActivityClock = (d.object(forKey: "liveActivityCompactClock") as? Bool) ?? false
         let mtu = TunnelMTU.stored(in: d)
@@ -123,6 +125,8 @@ enum BackupManager {
             uplinkSynthSec: synthSec,
             memstatsFastTicks: fastTicks,
             vkAuth: vkAuth,
+            lanProxyEnabled: lanProxyEnabled,
+            lanProxyPort: lanProxyPort,
             liveActivityEnabled: liveActivity,
             liveActivityCompactClock: liveActivityClock,
             uplinkPaceKiB: paceKiB,
@@ -243,6 +247,8 @@ enum BackupManager {
         if let v = s.uplinkSynthSec { d.set(v, forKey: "uplinkSynthSec") }
         if let v = s.memstatsFastTicks { d.set(v, forKey: "memstatsFastTicks") }
         if let v = s.vkAuth { d.set(v, forKey: "VKAuth") }
+        if let v = s.lanProxyEnabled { d.set(v, forKey: LANProxyConfiguration.enabledKey) }
+        if let v = s.lanProxyPort { d.set(LANProxyConfiguration.clampPort(v), forKey: LANProxyConfiguration.portKey) }
         if let v = s.liveActivityEnabled { d.set(v, forKey: "liveActivityEnabled") }
         if let v = s.liveActivityCompactClock { d.set(v, forKey: "liveActivityCompactClock") }
         // Clamped on the way in: a hand-edited backup is an untrusted source,
