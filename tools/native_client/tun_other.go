@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-//go:build !freebsd
+//go:build !freebsd && !darwin
 
 package main
 

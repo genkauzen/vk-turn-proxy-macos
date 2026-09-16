@@ -54,6 +54,7 @@ func main() {
 	keyFile := flag.String("wg-key-file", "", "file holding the WireGuard private key (base64, one line)")
 	peerKey := flag.String("wg-peer-key", "", "the server's WireGuard public key (base64)")
 	pskFile := flag.String("wg-psk-file", "", "optional file holding the WireGuard preshared key (base64)")
+	cookieFile := flag.String("vk-cookie-file", "", "optional file holding a logged-in VK Cookie header (remixsid=…; p=…): the app's cookie-auth path, minting from the call link as the account instead of anonymously")
 	address := flag.String("address", "10.10.0.2/24", "tunnel address in CIDR form; the gateway is the first host of that network")
 	// 🚨 NOT "tun": wireguard-go creates tun0 and RENAMES it to the requested
 	// name, and renaming to the bare clone prefix double-faults the FreeBSD
@@ -99,6 +100,16 @@ func main() {
 		if pskHex, err = keyHexFromFile(*pskFile); err != nil {
 			log.Fatalf("-wg-psk-file: %v", err)
 		}
+	}
+	if *cookieFile != "" {
+		raw, err := os.ReadFile(*cookieFile)
+		if err != nil {
+			log.Fatalf("-vk-cookie-file: %v", err)
+		}
+		// One call link here, so every slot mints from the same call; the
+		// proxy dedups relays per link and says so if the link yields too few.
+		proxy.SetVKCookieAuth(true, strings.TrimSpace(string(raw)), []string{*vkLink})
+		log.Printf("vk: cookie auth enabled (link %s)", cookieLinkTail(*vkLink))
 	}
 	gw, err := gatewayOf(*address)
 	if err != nil {
@@ -572,4 +583,12 @@ func keys(m map[string]bool) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// cookieLinkTail is the last few characters of a call link, for the log.
+func cookieLinkTail(link string) string {
+	if len(link) <= 6 {
+		return "…"
+	}
+	return "…" + link[len(link)-6:]
 }

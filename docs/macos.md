@@ -106,3 +106,23 @@ provisioning-профилем команды (Development или Mac App Store),
 - `.onChange(of:perform:)` — deprecated-предупреждения на macOS 14; поведение не меняется,
   а поднимать сигнатуру нельзя без потери iOS 15.
 - Экспорт бэкапа/лога на Mac — это «сохранить файл», без списка получателей как на iOS.
+
+## Без Network Extension: консольный клиент
+
+Если подписать сборку профилем с NE capability нечем, на Mac есть путь, которого нет на
+iOS: `tools/native_client` — тот же Go-конвейер (proxy → VK TURN → SRTP → WireGuard),
+открывающий utun напрямую от root. Никаких entitlements не нужно.
+
+```bash
+go build -o native_client ./tools/native_client
+sudo ./native_client -server 31.56.185.53:56000 \
+  -vk-link https://vk.ru/call/join/<id> \
+  -vk-cookie-file cookie.txt \
+  -wg-key-file wg.key -wg-psk-file wg.psk -wg-peer-key <server pubkey> \
+  -address 10.66.66.5/24 -conns 30 -route 77.88.8.8
+```
+
+`-route` пускает через туннель отдельные хосты; `-default-route` — весь трафик
+(откажется, если default route уже смотрит в другой VPN). `-vk-cookie-file` включает
+cookie-авторизацию из приложения (заголовок `remixsid=…; p=…`); без него — анонимная
+выдача TURN-кредов по ссылке, возможна капча. Ctrl-C снимает маршруты и интерфейс.
