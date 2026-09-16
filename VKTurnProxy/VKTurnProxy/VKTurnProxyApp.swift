@@ -38,6 +38,7 @@ struct VKTurnProxyApp: App {
         // compiled into the widget too, so they cannot reference TunnelManager
         // directly; the app installs the sink they forward to. Gated because
         // ActivityKit — and the controller — start at iOS 16.2.
+        #if os(iOS)
         if #available(iOS 16.2, *) {
             Task { @MainActor in
                 LiveActivityActionRouter.shared.handler = { action in
@@ -45,6 +46,7 @@ struct VKTurnProxyApp: App {
                 }
             }
         }
+        #endif
     }
 
     var body: some Scene {
@@ -68,6 +70,16 @@ struct VKTurnProxyApp: App {
                 // doesn't reach the empty space inside Form/List, so this is
                 // attached once here for every screen instead.
                 .background(KeyboardDismisser())
+                // A phone-shaped layout needs a phone-shaped window; the Mac
+                // otherwise opens the Form at a size that hides the log pane.
+                #if os(macOS)
+                .frame(minWidth: 480, idealWidth: 560, minHeight: 640, idealHeight: 820)
+                #endif
         }
+        #if os(macOS)
+        // Settings live inside the main window (the same Form as on iOS); a
+        // Mac-only Settings scene would be a second copy of the same screens.
+        .windowResizability(.contentMinSize)
+        #endif
     }
 }

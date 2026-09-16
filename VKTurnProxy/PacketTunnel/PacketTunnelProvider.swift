@@ -1006,7 +1006,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             // is async and may return nil if iOS denies our context (e.g.
             // missing entitlement) — we still proceed in either case so
             // path event logging never blocks on the SSID lookup.
-            if path.usesInterfaceType(Network.NWInterface.InterfaceType.wifi) {
+            // On macOS NEHotspotNetwork does not exist (CoreWLAN is the Mac's
+            // API and needs Location for the SSID); the wifi path is logged
+            // there without a network name, like every other interface type.
+            #if os(iOS)
+            let canReadSSID = true
+            #else
+            let canReadSSID = false
+            #endif
+            if canReadSSID, path.usesInterfaceType(Network.NWInterface.InterfaceType.wifi) {
+                #if os(iOS)
                 NEHotspotNetwork.fetchCurrent { [weak self] network in
                     guard let self = self else { return }
                     // 🚨 BACK ONTO THE PATH QUEUE FIRST. fetchCurrent answers on
@@ -1030,6 +1039,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                         process()
                     }
                 }
+                #endif
             } else {
                 self.currentWiFiSSID = nil
                 process()

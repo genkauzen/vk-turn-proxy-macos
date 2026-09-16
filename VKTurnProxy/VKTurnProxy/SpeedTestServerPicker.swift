@@ -187,7 +187,7 @@ struct SpeedTestServerPicker: View {
         }
         .searchable(text: $query, prompt: "Name, city or sponsor")
         .navigationTitle("Server")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .onAppear { if runner.servers.isEmpty { runner.loadServers() } }
     }
 }

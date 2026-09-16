@@ -3,6 +3,10 @@ options:
   bundleIdPrefix: com.vkturnproxy
   deploymentTarget:
     iOS: "15.0"
+    # macOS 14: the App Group is spelled iOS-style (`group.…`) in the code and
+    # both entitlements files; macOS honours that spelling from 14/15 on when
+    # the build is provisioned, older Macs only the `TEAMID.…` spelling.
+    macOS: "14.0"
   xcodeVersion: "16.2"
 
 settings:
@@ -227,3 +231,119 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: AppIntents.framework
+
+  # ─── macOS ────────────────────────────────────────────────────────────────
+  # The same app and the same tunnel, built for the Mac. The two targets share
+  # every Swift source with their iOS twins except what is an iOS surface with
+  # no Mac counterpart (Live Activity, ActivityKit) — the platform seams sit in
+  # PlatformBridge.swift and behind `#if os(iOS)` in the shared files. The
+  # widget target has no Mac twin at all.
+  #
+  # Bundle identifiers are the iOS ones on purpose: TunnelManager names the
+  # provider as "com.vkturnproxy.app.tunnel", the App Group and the keychain
+  # group are spelled once in code, and Apple treats iOS+macOS as one App ID.
+  #
+  # 🚨 DISTRIBUTION: a packet-tunnel APP extension is loaded on macOS only for
+  # a build provisioned by a team (development or Mac App Store). A Developer
+  # ID build needs a SYSTEM extension instead; that is a different bundle
+  # (Contents/Library/SystemExtensions, OSSystemExtensionRequest activation)
+  # and is not what this target produces.
+  VKTurnProxyMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: VKTurnProxy
+        excludes:
+          # ActivityKit and LiveActivityIntent do not exist on macOS. The call
+          # sites in TunnelManager / RoutingShortcuts / the app entry are
+          # `#if os(iOS)`; AdvancedView's refreshLiveActivity() stays a no-op.
+          - LiveActivityController.swift
+          - LiveActivityIntents.swift
+          - VPNActivityAttributes.swift
+    info:
+      path: VKTurnProxyMac/Info.plist
+      properties:
+        CFBundleDisplayName: "VK Turn Proxy"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.utilities
+        # The same 1-Click link schemes as iOS (vkturnproxy://, wdtt://,
+        # freeturn://, csqtt://): Launch Services routes them to the app and
+        # SwiftUI delivers them through the same .onOpenURL.
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.vkturnproxy.app
+            CFBundleURLSchemes:
+              - vkturnproxy
+              - wdtt
+              - freeturn
+              - csqtt
+    settings:
+      base:
+        PRODUCT_NAME: "VK Turn Proxy"
+        PRODUCT_BUNDLE_IDENTIFIER: com.vkturnproxy.app
+        CODE_SIGN_ENTITLEMENTS: VKTurnProxyMac/VKTurnProxyMac.entitlements
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: 403
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # A macOS app extension host must be sandboxed for NE to load the
+        # extension; the entitlements file carries the sandbox keys.
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_OBJC_BRIDGING_HEADER: VKTurnProxy/BridgeHeader.h
+        OTHER_LDFLAGS:
+          - "-lresolv"
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/../WireGuardBridge/build"
+    dependencies:
+      - target: PacketTunnelMac
+        embed: true
+      - sdk: NetworkExtension.framework
+      - sdk: AppIntents.framework
+      # Same rule as iOS: link the static archive, never embed it.
+      - framework: ../WireGuardBridge/build/WireGuardTURN.xcframework
+        embed: false
+
+  PacketTunnelMac:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: PacketTunnel
+      # The same shared files the iOS extension compiles — see PacketTunnel
+      # above for what each one is there for.
+      - path: VKTurnProxy/SharedLogger.swift
+      - path: VKTurnProxy/OSLogReader.swift
+      - path: VKTurnProxy/VKCookieStore.swift
+      - path: VKTurnProxy/DirectRouteSync.swift
+      - path: VKTurnProxy/AppEntitlements.swift
+      - path: VKTurnProxy/TunnelMTU.swift
+    info:
+      path: PacketTunnelMac/Info.plist
+      properties:
+        CFBundleDisplayName: "VK Turn Proxy Tunnel"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_NAME: PacketTunnel
+        PRODUCT_BUNDLE_IDENTIFIER: com.vkturnproxy.app.tunnel
+        CODE_SIGN_ENTITLEMENTS: PacketTunnelMac/PacketTunnelMac.entitlements
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: 403
+        SKIP_INSTALL: YES
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_OBJC_BRIDGING_HEADER: PacketTunnel/BridgeHeader.h
+        OTHER_LDFLAGS:
+          - "-lresolv"
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/../WireGuardBridge/build"
+    dependencies:
+      - framework: ../WireGuardBridge/build/WireGuardTURN.xcframework
+      - sdk: NetworkExtension.framework

@@ -6,6 +6,12 @@ IOS_SDK := $(shell xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
 IOS_SIM_SDK := $(shell xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null)
 IOS_MIN_VERSION := 15.0
 
+# macOS SDK paths. The archive is a plain GOOS=darwin c-archive: the bridge has
+# no ios-only source (only its tests carry the `ios` tag), and the same GODEBUG
+# constructor that keeps the iOS Network Extension alive is harmless on macOS.
+MACOS_SDK := $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+MACOS_MIN_VERSION := 13.0
+
 # Go settings
 export CGO_ENABLED := 1
 export GOARCH := arm64
@@ -21,7 +27,7 @@ GO_LDFLAGS := -s -w
 REAL_GOROOT := $(shell go env GOROOT 2>/dev/null)
 PATCHED_GOROOT := $(BUILDDIR)/goroot
 
-.PHONY: all clean ios-device ios-simulator xcframework goroot
+.PHONY: all clean ios-device ios-simulator macos macos-arm64 macos-amd64 xcframework xcframework-macos goroot
 
 all: xcframework
 
@@ -71,13 +77,64 @@ ios-simulator: goroot
 	go build $(GO_BUILD_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $(BUILDDIR)/libwg-turn-sim-arm64.a .
 	@echo "==> Done: $(BUILDDIR)/libwg-turn-sim-arm64.a"
 
-# Create XCFramework from both architectures
-xcframework: ios-device ios-simulator
+# Build for macOS (Apple Silicon). GOOS=darwin, not ios: the macOS Network
+# Extension runs as an ordinary process with sigaltstack available, and the
+# ios-only runtime signal handling is not needed. The patched GOROOT is still
+# used so Go timers keep ticking through sleep (mach_continuous_time); the
+# patch touches sys_darwin*, shared by both targets.
+macos-arm64: goroot
+	@echo "==> Building for macOS (arm64) with GOOS=darwin..."
+	GOROOT="$(PATCHED_GOROOT)" \
+	CGO_CFLAGS="-isysroot $(MACOS_SDK) -arch arm64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	CGO_LDFLAGS="-isysroot $(MACOS_SDK) -arch arm64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	GOARCH=arm64 \
+	GOOS=darwin \
+	CGO_ENABLED=1 \
+	CC="$(shell xcrun --sdk macosx -f clang) -isysroot $(MACOS_SDK) -arch arm64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	go build -buildmode=c-archive -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BUILDDIR)/libwg-turn-macos-arm64.a .
+	@echo "==> Done: $(BUILDDIR)/libwg-turn-macos-arm64.a"
+
+# Build for macOS (Intel). Cross-compiled from any Mac: Go targets amd64 and
+# clang gets -arch x86_64 against the same SDK.
+macos-amd64: goroot
+	@echo "==> Building for macOS (amd64) with GOOS=darwin..."
+	GOROOT="$(PATCHED_GOROOT)" \
+	CGO_CFLAGS="-isysroot $(MACOS_SDK) -arch x86_64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	CGO_LDFLAGS="-isysroot $(MACOS_SDK) -arch x86_64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	GOARCH=amd64 \
+	GOOS=darwin \
+	CGO_ENABLED=1 \
+	CC="$(shell xcrun --sdk macosx -f clang) -isysroot $(MACOS_SDK) -arch x86_64 -mmacosx-version-min=$(MACOS_MIN_VERSION)" \
+	go build -buildmode=c-archive -trimpath -ldflags "$(GO_LDFLAGS)" -o $(BUILDDIR)/libwg-turn-macos-amd64.a .
+	@echo "==> Done: $(BUILDDIR)/libwg-turn-macos-amd64.a"
+
+# Universal macOS archive: one xcframework slice may carry both Mac
+# architectures only as a fat file, so lipo them together.
+macos: macos-arm64 macos-amd64
+	@echo "==> Creating universal macOS archive..."
+	lipo -create $(BUILDDIR)/libwg-turn-macos-arm64.a $(BUILDDIR)/libwg-turn-macos-amd64.a \
+		-output $(BUILDDIR)/libwg-turn-macos.a
+	@echo "==> Done: $(BUILDDIR)/libwg-turn-macos.a"
+
+# Create XCFramework from every architecture: iOS device, iOS Simulator and
+# macOS. One framework path in project.yml then serves all three platforms.
+xcframework: ios-device ios-simulator macos
 	@echo "==> Creating XCFramework..."
 	rm -rf $(DESTDIR)/WireGuardTURN.xcframework
 	xcodebuild -create-xcframework \
 		-library $(BUILDDIR)/libwg-turn-ios-arm64.a -headers $(CURDIR)/include \
 		-library $(BUILDDIR)/libwg-turn-sim-arm64.a -headers $(CURDIR)/include \
+		-library $(BUILDDIR)/libwg-turn-macos.a -headers $(CURDIR)/include \
+		-output $(DESTDIR)/WireGuardTURN.xcframework
+	@echo "==> Done: $(DESTDIR)/WireGuardTURN.xcframework"
+
+# macOS-only XCFramework, for a Mac that has no iOS SDK installed or a
+# macOS-only build. Same output path — the iOS targets simply have no slice.
+xcframework-macos: macos
+	@echo "==> Creating macOS-only XCFramework..."
+	rm -rf $(DESTDIR)/WireGuardTURN.xcframework
+	xcodebuild -create-xcframework \
+		-library $(BUILDDIR)/libwg-turn-macos.a -headers $(CURDIR)/include \
 		-output $(DESTDIR)/WireGuardTURN.xcframework
 	@echo "==> Done: $(DESTDIR)/WireGuardTURN.xcframework"
 

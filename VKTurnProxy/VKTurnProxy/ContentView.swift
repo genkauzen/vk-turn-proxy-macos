@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 import NetworkExtension
 import WebKit
 import UniformTypeIdentifiers
@@ -46,7 +50,8 @@ struct ContentView: View {
     // live, used the new one. Reading the store at render time in a child
     // removes the class, not the case.
     var body: some View {
-        NavigationView {
+        // NavigationView on iOS, NavigationStack on macOS — see PlatformBridge.
+        PlatformNavigation {
             // ScrollView is the safety net for very small screens
             // (iPhone SE etc.). When the stats grid grows enough that
             // it would push Logs/Settings below the visible area, the
@@ -80,7 +85,7 @@ struct ContentView: View {
                 .padding(.top, 8)
             }
             .navigationTitle("VK Turn Proxy")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .sheet(isPresented: $tunnel.captchaPending) {
                 if let urlStr = tunnel.captchaImageURL, let url = URL(string: urlStr) {
                     CaptchaWebView(
@@ -550,7 +555,7 @@ struct SettingsView: View {
                         // wraps to 2-3 lines at typical widths and got clipped inside
                         // the field with no visual hint there was more to scroll to.
                         .frame(minHeight: vkAuthEnabled ? 110 : 70)
-                        .autocapitalization(.none)
+                        .noAutocapitalization()
                         .disableAutocorrection(true)
                 }
                 if vkAuthEnabled {
@@ -914,7 +919,7 @@ struct SettingsView: View {
     /// single error alert; success populates pendingConnectionLink
     /// and shows the confirm alert.
     private func handleConnectionLinkPaste() {
-        let raw = UIPasteboard.general.string ?? ""
+        let raw = PlatformPasteboard.string ?? ""
         if raw.isEmpty {
             alertTitle = "Clipboard Empty"
             alertMessage = "Copy a vkturnproxy://, wdtt://, freeturn:// or csqtt:// link to the clipboard first, then tap this again."
@@ -1012,6 +1017,39 @@ struct IdentifiableURL: Identifiable {
 /// during the schema migration test where vkturnproxy-backup-*.json sat
 /// un-highlighted in Files.app's Downloads view and had to be located by
 /// search instead of by browsing.
+#if os(macOS)
+/// The Mac's file chooser. Presented from the same `.sheet` as the iOS
+/// picker, so it is a View: it opens NSOpenPanel the moment it appears and
+/// dismisses itself when the panel closes, whichever button closed it.
+struct DocumentPicker: View {
+    let contentTypes: [UTType]
+    let onPicked: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var opened = false
+
+    var body: some View {
+        ProgressView("Choose a backup file…")
+            .padding(32)
+            .onAppear {
+                guard !opened else { return }
+                opened = true
+                let panel = NSOpenPanel()
+                panel.allowedContentTypes = contentTypes
+                panel.allowsMultipleSelection = false
+                panel.canChooseDirectories = false
+                // begin() runs the panel as a window-modal sheet over the main
+                // window (the one behind this sheet), the Mac's equivalent of
+                // the iOS picker sliding up.
+                panel.begin { response in
+                    if response == .OK, let url = panel.url {
+                        onPicked(url)
+                    }
+                    dismiss()
+                }
+            }
+    }
+}
+#else
 struct DocumentPicker: UIViewControllerRepresentable {
     let contentTypes: [UTType]
     let onPicked: (URL) -> Void
@@ -1043,6 +1081,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
         }
     }
 }
+#endif
 
 // MARK: - Stats View
 
@@ -1208,7 +1247,7 @@ struct StatBox: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
-        .background(Color(.systemGray6))
+        .background(Color.platformGroupedFill)
         .cornerRadius(8)
     }
 }
@@ -1281,7 +1320,7 @@ struct CaptchaWebView: View {
                             .monospacedDigit()
                     }
                     .padding(32)
-                    .background(Color(.systemBackground).opacity(0.97))
+                    .background(Color.platformBackground.opacity(0.97))
                     .cornerRadius(16)
                     .shadow(radius: 12)
                 }
@@ -1301,7 +1340,7 @@ struct CaptchaWebView: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding(32)
-                    .background(Color(.systemBackground).opacity(0.97))
+                    .background(Color.platformBackground.opacity(0.97))
                     .cornerRadius(16)
                     .shadow(radius: 12)
                 }
@@ -1312,10 +1351,11 @@ struct CaptchaWebView: View {
                 }
             }
         }
+        .webSheetSized()
     }
 }
 
-struct CaptchaWKWebView: UIViewRepresentable {
+struct CaptchaWKWebView: PlatformViewRepresentable {
     let url: URL
     let onTokenCaptured: (String) -> Void
     // Called when JS detector concludes the loaded page is in "Attempt limit
@@ -1352,7 +1392,9 @@ struct CaptchaWKWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        #if os(iOS)
         config.allowsInlineMediaPlayback = true
+        #endif
 
         // Use an ephemeral data store so every CaptchaWKWebView instance starts
         // with a clean cookie jar. VK's anti-abuse cookies otherwise persist
@@ -1649,9 +1691,17 @@ struct CaptchaWKWebView: UIViewRepresentable {
         // applicationNameForUserAgent only APPENDS to the UA WebKit builds for
         // itself, so the platform and engine tokens stay truthful and only the
         // Safari marketing version — which tracks the iOS version — is added.
+        // The same rule on the Mac: WebKit already says "Macintosh", so only
+        // desktop Safari's suffix is appended — no "Mobile" token that the
+        // engine underneath would contradict.
         let os = ProcessInfo.processInfo.operatingSystemVersion
+        #if os(iOS)
         config.applicationNameForUserAgent =
             "Version/\(os.majorVersion).\(os.minorVersion) Mobile/15E148 Safari/604.1"
+        #else
+        config.applicationNameForUserAgent =
+            "Version/\(os.majorVersion).\(os.minorVersion) Safari/605.1.15"
+        #endif
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -1665,7 +1715,7 @@ struct CaptchaWKWebView: UIViewRepresentable {
         // to id.vk.ru. Needed for matching our Go-side PoW client to the
         // captured Safari fingerprint.
         #if DEBUG
-        if #available(iOS 16.4, *) {
+        if #available(iOS 16.4, macOS 13.3, *) {
             webView.isInspectable = true
         }
         #endif
@@ -2169,6 +2219,81 @@ struct LogsView: View {
     }
 }
 
+#if os(macOS)
+/// NSTextView wrapper — the Mac twin of the UITextView below: one scroll view
+/// holding a read-only, selectable monospaced text view.
+struct LogTextView: NSViewRepresentable {
+    let text: String
+    let autoScroll: Bool
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSTextView.scrollableTextView()
+        scroll.hasVerticalScroller = true
+        let tv = scroll.documentView as! NSTextView
+        tv.isEditable = false
+        tv.isSelectable = true
+        tv.isRichText = false
+        tv.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        tv.textColor = .labelColor
+        tv.backgroundColor = .textBackgroundColor
+        tv.textContainerInset = NSSize(width: 4, height: 8)
+        // Wrap to the scroll view's width, never scroll horizontally — a log
+        // line that runs off the right edge is a log line nobody reads.
+        tv.isHorizontallyResizable = false
+        tv.textContainer?.widthTracksTextView = true
+        tv.autoresizingMask = [.width]
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let tv = scroll.documentView as? NSTextView else { return }
+        if tv.string != text {
+            tv.string = text
+            if autoScroll && !text.isEmpty {
+                tv.scrollToEndOfDocument(nil)
+            }
+        }
+    }
+}
+
+/// The Mac has no activity sheet; "Share" a file means "save it somewhere".
+/// NSSavePanel copies the temp file to the chosen place. Same `.sheet` host as
+/// the iOS ShareSheet, so this too is a View that runs its panel on appear.
+struct ShareSheet: View {
+    let activityItems: [Any]
+    @Environment(\.dismiss) private var dismiss
+    @State private var opened = false
+
+    var body: some View {
+        ProgressView("Choose where to save…")
+            .padding(32)
+            .onAppear {
+                guard !opened else { return }
+                opened = true
+                guard let source = activityItems.compactMap({ $0 as? URL }).first else {
+                    dismiss()
+                    return
+                }
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = source.lastPathComponent
+                panel.canCreateDirectories = true
+                panel.begin { response in
+                    if response == .OK, let dest = panel.url {
+                        do {
+                            if FileManager.default.fileExists(atPath: dest.path) {
+                                try FileManager.default.removeItem(at: dest)
+                            }
+                            try FileManager.default.copyItem(at: source, to: dest)
+                        } catch {
+                            SharedLogger.shared.log("[Share] save failed: \(error.localizedDescription)")
+                        }
+                    }
+                    dismiss()
+                }
+            }
+    }
+}
+#else
 /// UITextView wrapper — handles large text without SwiftUI layout explosion.
 struct LogTextView: UIViewRepresentable {
     let text: String
@@ -2207,6 +2332,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
+#endif
 
 #Preview {
     ContentView()

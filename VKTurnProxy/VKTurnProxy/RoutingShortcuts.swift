@@ -48,9 +48,11 @@ struct SetDirectRoutingIntent: AppIntent {
         // 🚨 GATED: on `.noManager` the tunnel's state is unknown and `status` is
         // still its initial `.disconnected`, which the controller answers by
         // ENDING the card — irreversibly from the background.
+        #if os(iOS)
         if outcome.tunnelStateIsKnown, #available(iOS 16.2, *) {
             await LiveActivityController.shared.refreshNowAndWait()
         }
+        #endif
         if let failure = outcome.automationFailure {
             throw RoutingIntentError.message(failure)
         }

@@ -43,3 +43,8 @@ release.sh
 install.sh
 idev.sh
 iphone.tcpdump.sh
+
+# macOS port: local xcodebuild output and bridge build logs.
+build-mac/
+build-ios/
+build-*-bridge.log

@@ -42,7 +42,7 @@ struct SpeedTestView: View {
             }
         }
         .navigationTitle("Speed test")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
     }
 
     // MARK: Server

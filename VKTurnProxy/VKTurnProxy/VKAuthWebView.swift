@@ -51,12 +51,13 @@ struct VKAuthWebView: View {
                 .multilineTextAlignment(.center)
                 .padding(8)
         }
+        .webSheetSized()
     }
 }
 
 /// UIViewRepresentable wrapping a WKWebView that loads VK login and polls its
 /// cookie store for the remixsid + p pair.
-struct VKAuthWKWebView: UIViewRepresentable {
+struct VKAuthWKWebView: PlatformViewRepresentable {
     let onHarvested: (_ cookieHeader: String, _ expiry: Date) -> Void
     let onStatus: (String) -> Void
 

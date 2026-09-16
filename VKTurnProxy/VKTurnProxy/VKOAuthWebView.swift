@@ -120,6 +120,7 @@ struct VKOAuthWebView: View {
                 .multilineTextAlignment(.center)
                 .padding(8)
         }
+        .webSheetSized()
     }
 
     private func finish(_ r: VKOAuthResult) {
@@ -131,7 +132,7 @@ struct VKOAuthWebView: View {
 
 /// The webview half: plants the cookies, loads the authorize URL, and watches
 /// for the redirect that carries the token.
-private struct VKOAuthWKWebView: UIViewRepresentable {
+private struct VKOAuthWKWebView: PlatformViewRepresentable {
     let onToken: (String) -> Void
     let onNeedsLogin: () -> Void
     let onStatus: (String) -> Void

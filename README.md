@@ -10,6 +10,13 @@
 
 Так же, возможна самостоятельная загрузка IPA файла из раздела [Releases](https://github.com/anton48/vk-turn-proxy-ios/releases) на устройство. Но сначала потребуется подписать IPA сертификатом **платного** эккаунта разработчика ([это требование Apple для работы с VPN](https://developer.apple.com/help/account/reference/supported-capabilities-ios)). При загрузке такого IPA файла на устройство само подключение будет рабочим, но не будет работать статистика, сохранение TURN credentials и профайла, а логи будут очень ограниченными. При подписке сертификатом от бесплатного эккаунта приложение работать не будет.
 
+## macOS
+
+Приложение собирается и под macOS из того же исходного кода — цели `VKTurnProxyMac`
+(приложение) и `PacketTunnelMac` (расширение packet-tunnel) в `VKTurnProxy/project.yml`.
+Go-мост собирается универсальным (arm64 + x86_64) и попадает в тот же `WireGuardTURN.xcframework`
+отдельным macOS-слайсом. Как собрать, подписать и что отличается от iOS — в [docs/macos.md](docs/macos.md).
+
 ## Документация
 
 [Как это работает](https://github.com/anton48/vk-turn-proxy-ios/blob/main/docs/setup.md#как-это-работает)

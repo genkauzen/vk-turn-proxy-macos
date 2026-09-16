@@ -1,7 +1,11 @@
 import Foundation
 import Network
 import NetworkExtension
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 // MARK: - Tunnel Statistics
 
@@ -351,8 +355,15 @@ class TunnelManager: ObservableObject {
             await ensureManagerLoaded()
         }
         // Restart stats polling when app returns from background
+        // macOS has no background suspension, but the same "app is back in
+        // front" moment exists as NSApplication.didBecomeActiveNotification.
+        #if os(iOS)
+        let foregroundNotification = UIApplication.willEnterForegroundNotification
+        #else
+        let foregroundNotification = NSApplication.didBecomeActiveNotification
+        #endif
         foregroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
+            forName: foregroundNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -891,9 +902,11 @@ class TunnelManager: ObservableObject {
         // in the background is UNRECOVERABLE. It is done here rather than at each
         // call site because one call site did not do it: the DIRECT repair,
         // which reconnects precisely when a card is on screen showing routing.
+        #if os(iOS)
         if #available(iOS 16.2, *) {
             LiveActivityController.shared.holdThroughReconnect()
         }
+        #endif
 
         if status != .disconnected && status != .invalid {
             stopTunnelInternally() // the OLD session's stop is the app's own, not the user's cancel of the new start
@@ -1266,9 +1279,11 @@ class TunnelManager: ObservableObject {
     private func adoptDirectMode(_ value: Bool) {
         guard directMode != value else { return }
         directMode = value
+        #if os(iOS)
         if #available(iOS 16.2, *) {
             LiveActivityController.shared.refreshNow()
         }
+        #endif
     }
 
     /// DIRECT mode (issue #72): route traffic around the tunnel WITHOUT tearing
@@ -2347,9 +2362,13 @@ class TunnelManager: ObservableObject {
     private func syncLiveActivity() {
         // The one shared rule; an empty name means NAME NOTHING, never the
         // selection. → SessionServer.swift.
+        // macOS has no ActivityKit — the Lock Screen card is an iOS surface, so
+        // the macOS build keeps the call sites and drops the sink.
+        #if os(iOS)
         LiveActivityBridge.sync(status: status,
                                 connectedAt: live.connectedAt,
                                 serverName: serverCaption.cardName)
+        #endif
     }
 
     private func startStatsPolling(reset: Bool = true) {

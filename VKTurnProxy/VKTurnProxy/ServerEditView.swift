@@ -103,14 +103,14 @@ struct ServerEditView: View {
                 // (only the WireGuard-keys section below is hidden in WRAP-A,
                 // since those are minted server-side via GETCONF).
                 TextField("Proxy Server (host:port)", text: $draft.peerAddress)
-                    .autocapitalization(.none)
+                    .noAutocapitalization()
                     .disableAutocorrection(true)
                 hint(ConfigValidation.peerAddress(draft.peerAddress))
 
                 TextField("TURN server (IP:port, optional)", text: $draft.turnServerOverride)
-                    .autocapitalization(.none)
+                    .noAutocapitalization()
                     .disableAutocorrection(true)
-                    .keyboardType(.numbersAndPunctuation)
+                    .numericKeyboard()
                 hint(ConfigValidation.turnOverride(draft.turnServerOverride))
 
                 Picker("Server mode", selection: mode) {
@@ -122,21 +122,21 @@ struct ServerEditView: View {
                 Group {
                     if mode.wrappedValue == .srtpWrap {
                         SecureField("WRAP key (64 hex chars)", text: $draft.wrapKeyHex)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                         hint(ConfigValidation.wrapKeyHex(draft.wrapKeyHex))
                     }
                     if mode.wrappedValue == .srtpWrapA {
                         SecureField("Server password", text: $draft.wrapAPassword)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                         hint(ConfigValidation.wrapAPassword(draft.wrapAPassword))
                         // The server keys the WireGuard peer it mints on this
                         // value, so changing it gets you a NEW tunnel IP.
                         TextField("Device ID", text: $draft.deviceID)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                     }
                     if mode.wrappedValue == .csqtt {
                         SecureField("Server password", text: $draft.csqttPassword)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                         hint(ConfigValidation.csqttPassword(draft.csqttPassword))
                         // The server binds an unbound password to this value;
                         // a second device on the same password is refused.
@@ -144,7 +144,7 @@ struct ServerEditView: View {
                         // goes out must be the one on screen, never a hidden
                         // fallback; onAppear below fills an empty one.
                         TextField("Device ID", text: $draft.csqttDeviceID)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                         hint(ConfigValidation.csqttDeviceID(draft.csqttDeviceID, onEditScreen: true))
                         Text("csqtt has no key exchange: the password is the tunnel's only key, so traffic recorded today can be decrypted by anyone who learns it later (no forward secrecy). The other modes do not have this property.")
                             .font(.caption)
@@ -152,7 +152,7 @@ struct ServerEditView: View {
                     }
                     if mode.wrappedValue == .srtpWrapS {
                         SecureField("WRAP key (64 hex chars)", text: $draft.wrapKeyHex)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                         hint(ConfigValidation.wrapKeyHex(draft.wrapKeyHex))
                         Picker("Obfuscation profile", selection: $draft.obfProfile) {
                             Text("rtpopus").tag("rtpopus")
@@ -160,7 +160,7 @@ struct ServerEditView: View {
                             Text("rtpopus3").tag("rtpopus3")
                         }
                         TextField("Client ID", text: $draft.clientID)
-                            .autocapitalization(.none).disableAutocorrection(true)
+                            .noAutocapitalization().disableAutocorrection(true)
                     }
                 }
 
@@ -177,19 +177,19 @@ struct ServerEditView: View {
             if mode.wrappedValue != .srtpWrapA && mode.wrappedValue != .csqtt {
                 Section("WireGuard") {
                     SecureField("Private Key (base64)", text: $draft.privateKey)
-                        .autocapitalization(.none).disableAutocorrection(true)
+                        .noAutocapitalization().disableAutocorrection(true)
                     hint(ConfigValidation.wgKey(draft.privateKey, label: "Private key", required: true))
                     TextField("Peer Public Key (base64)", text: $draft.peerPublicKey)
-                        .autocapitalization(.none).disableAutocorrection(true)
+                        .noAutocapitalization().disableAutocorrection(true)
                     hint(ConfigValidation.wgKey(draft.peerPublicKey, label: "Peer public key", required: true))
                     SecureField("Preshared Key (base64)", text: $draft.presharedKey)
-                        .autocapitalization(.none).disableAutocorrection(true)
+                        .noAutocapitalization().disableAutocorrection(true)
                     hint(ConfigValidation.wgKey(draft.presharedKey, label: "Preshared key", required: false))
                     TextField("Tunnel Address", text: $draft.tunnelAddress)
-                        .autocapitalization(.none)
+                        .noAutocapitalization()
                     hint(ConfigValidation.tunnelAddress(draft.tunnelAddress))
                     TextField("DNS Servers", text: $draft.dnsServers)
-                        .autocapitalization(.none)
+                        .noAutocapitalization()
                     hint(ConfigValidation.dnsServers(draft.dnsServers))
                 }
             }
@@ -223,7 +223,7 @@ struct ServerEditView: View {
             }
         }
         .navigationTitle(draft.serverName.isEmpty ? "Server" : draft.serverName)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         // Persist every edit through the store (projects onto the flat keys when
         // this is the active server). onChange does not fire on first render.
         .onChange(of: draft) { store.update($0) }

@@ -1,5 +1,16 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#endif
+
+#if os(macOS)
+/// A Mac has no software keyboard: clicking elsewhere moves first responder
+/// the AppKit way. The root view attaches this unconditionally, so it exists
+/// here as an empty view rather than as an `#if` at the call site.
+struct KeyboardDismisser: View {
+    var body: some View { EmptyView() }
+}
+#else
 
 /// Tapping empty space should dismiss the keyboard, same as almost every
 /// other iOS app. SwiftUI's Form/List swallow a plain `.onTapGesture` placed
@@ -107,3 +118,4 @@ struct KeyboardDismisser: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView { KeyboardDismissAnchor(frame: .zero) }
     func updateUIView(_ uiView: UIView, context: Context) {}
 }
+#endif
